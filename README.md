@@ -16,11 +16,11 @@ flowchart TD
         R
     end
     
-    classDef client fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
-    classDef alb fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    classDef server fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
-    classDef redis fill:#fff3e0,stroke:#f57c00,stroke-width:2px
-    classDef aws fill:#fff9c4,stroke:#f9a825,stroke-width:3px
+    classDef client fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
+    classDef alb fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
+    classDef server fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000
+    classDef redis fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
+    classDef aws fill:none,stroke:#f9a825,stroke-width:3px,color:#000
     
     class C1,C2 client
     class ALB alb
@@ -51,12 +51,12 @@ flowchart TD
         RR
     end
     
-    classDef client fill:#ffebee,stroke:#d32f2f,stroke-width:2px
-    classDef alb fill:#ffebee,stroke:#d32f2f,stroke-width:2px
-    classDef server1 fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
-    classDef server2 fill:#ffebee,stroke:#d32f2f,stroke-width:2px
-    classDef redis fill:#fff3e0,stroke:#f57c00,stroke-width:2px
-    classDef aws fill:#ffebee,stroke:#d32f2f,stroke-width:3px
+    classDef client fill:#ffebee,stroke:#d32f2f,stroke-width:2px,color:#000
+    classDef alb fill:#ffebee,stroke:#d32f2f,stroke-width:2px,color:#000
+    classDef server1 fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000
+    classDef server2 fill:#ffebee,stroke:#d32f2f,stroke-width:2px,color:#000
+    classDef redis fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
+    classDef aws fill:none,stroke:#d32f2f,stroke-width:3px,color:#000
     
     class SC client
     class ALBRR alb
