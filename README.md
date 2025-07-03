@@ -10,7 +10,7 @@ flowchart TD
     ALB --> AS2[🖥️ App Server 2<br/>Local Todos]
     
     %% Redis Shared State
-    AS1 -->|PUBLISH| R[� Redis<br/>Shared State Store]
+    AS1 -->|PUBLISH| R[🔥 Redis<br/>Shared State Store]
     AS2 -->|PUBLISH| R
     R -.->|SUBSCRIBE| AS1
     R -.->|SUBSCRIBE| AS2
