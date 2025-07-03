@@ -27,6 +27,13 @@ flowchart TD
     class A1,A2 server
     class R redis
     class AWS aws
+    
+    linkStyle 0 stroke:#1976d2,stroke-width:4px
+    linkStyle 1 stroke:#1976d2,stroke-width:4px
+    linkStyle 2 stroke:#1976d2,stroke-width:4px
+    linkStyle 3 stroke:#1976d2,stroke-width:4px
+    linkStyle 4 stroke:#1976d2,stroke-width:4px
+    linkStyle 5 stroke:#1976d2,stroke-width:4px
 ```
 
 **✅ With Sticky Sessions: Todos persist per client**
@@ -64,6 +71,13 @@ flowchart TD
     class AS2 server2
     class RR redis
     class AWSRR aws
+    
+    linkStyle 0 stroke:#1976d2,stroke-width:4px
+    linkStyle 1 stroke:#1976d2,stroke-width:4px
+    linkStyle 2 stroke:#1976d2,stroke-width:4px
+    linkStyle 3 stroke:#1976d2,stroke-width:4px
+    linkStyle 4 stroke:#1976d2,stroke-width:4px
+    linkStyle 5 stroke:#1976d2,stroke-width:4px
 ```
 
 **❌ Without Sticky Sessions: Todos are lost when switching servers**
