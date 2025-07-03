@@ -8,7 +8,7 @@ architecture-beta
     service alb(load-balancer)[Load Balancer Nginx] in docker_compose
     service app1(server)[App Server 1 FastAPI] in docker_compose
     service app2(server)[App Server 2 FastAPI] in docker_compose
-    service redis(database)[Redis Pub/Sub Broker] in docker_compose
+    service redis(disk)[Redis PubSub Broker] in docker_compose
     
     client1:R --> L:alb
     client2:R --> L:alb
