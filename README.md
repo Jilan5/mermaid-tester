@@ -10,10 +10,10 @@ flowchart TD
     ALB --> AS2[🖥️ App Server 2<br/>Local Todos]
     
     %% Redis Shared State
-    AS1 -->|PUBLISH| R[🗄️ Redis<br/>Shared State Store]
+    AS1 -->|PUBLISH| R[� Redis<br/>Shared State Store]
     AS2 -->|PUBLISH| R
-    R -->|SUBSCRIBE| AS1
-    R -->|SUBSCRIBE| AS2
+    R -.->|SUBSCRIBE| AS1
+    R -.->|SUBSCRIBE| AS2
     
     %% AWS Infrastructure
     subgraph AWS["☁️ AWS Network Infrastructure"]
@@ -35,6 +35,17 @@ flowchart TD
     class AS1,AS2 server
     class R redis
     class AWS aws
+    
+    %% Bold blue arrows
+    linkStyle 0 stroke:#1976d2,stroke-width:4px
+    linkStyle 1 stroke:#1976d2,stroke-width:4px
+    linkStyle 2 stroke:#1976d2,stroke-width:4px
+    linkStyle 3 stroke:#1976d2,stroke-width:4px
+    linkStyle 4 stroke:#1976d2,stroke-width:4px
+    linkStyle 5 stroke:#1976d2,stroke-width:4px
+    linkStyle 6 stroke:#1976d2,stroke-width:4px
+    linkStyle 7 stroke:#1976d2,stroke-width:3px
+    linkStyle 8 stroke:#1976d2,stroke-width:3px
 ```
 
 **🔄 Redis Shared State Architecture:**
