@@ -1,14 +1,14 @@
 ```mermaid
 architecture-beta
-    group aws_cloud(cloud)[AWS Cloud Infrastructure]
+    group docker_compose(cloud)[Docker Compose Environment]
     
     service client1(internet)[Client 1 Browser] 
     service client2(internet)[Client 2 Browser]
     service client3(internet)[Client 3 Browser]
-    service alb(load-balancer)[Application Load Balancer] in aws_cloud
-    service app1(server)[App Server 1 - In-Memory Todos] in aws_cloud
-    service app2(server)[App Server 2 - In-Memory Todos] in aws_cloud
-    service redis(disk)[Redis Pub/Sub Broker] in aws_cloud
+    service alb(load-balancer)[Load Balancer Nginx] in docker_compose
+    service app1(server)[App Server 1 FastAPI] in docker_compose
+    service app2(server)[App Server 2 FastAPI] in docker_compose
+    service redis(database)[Redis Pub/Sub Broker] in docker_compose
     
     client1:R --> L:alb
     client2:R --> L:alb
