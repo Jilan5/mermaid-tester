@@ -1,24 +1,40 @@
 ```mermaid
-architecture-beta
-    group aws_network(cloud)[AWS Network Infrastructure]
+flowchart TD
+    %% Clients
+    C1[🌐 Client 1 Browser] --> ALB[⚖️ Application Load Balancer]
+    C2[🌐 Client 2 Browser] --> ALB
+    C3[🌐 Client 3 Browser] --> ALB
     
-    service client1(internet)[Client 1 Browser] 
-    service client2(internet)[Client 2 Browser]
-    service client3(internet)[Client 3 Browser]
-    service alb(load-balancer)[Application Load Balancer] in aws_network
-    service app1(server)[App Server 1 - Local Todos] in aws_network
-    service app2(server)[App Server 2 - Local Todos] in aws_network
-    service redis(disk)[Redis Shared State Store] in aws_network
+    %% App Servers
+    ALB --> AS1[🖥️ App Server 1<br/>Local Todos]
+    ALB --> AS2[🖥️ App Server 2<br/>Local Todos]
     
-    client1:R --> L:alb
-    client2:R --> L:alb
-    client3:R --> L:alb
-    alb:R --> L:app1
-    alb:R --> L:app2
-    app1:B --> T:redis
-    app2:B --> T:redis
-    redis:T --> B:app1
-    redis:T --> B:app2
+    %% Redis Shared State
+    AS1 -->|PUBLISH| R[🗄️ Redis<br/>Shared State Store]
+    AS2 -->|PUBLISH| R
+    R -->|SUBSCRIBE| AS1
+    R -->|SUBSCRIBE| AS2
+    
+    %% AWS Infrastructure
+    subgraph AWS["☁️ AWS Network Infrastructure"]
+        ALB
+        AS1
+        AS2
+        R
+    end
+    
+    %% Styling
+    classDef client fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
+    classDef alb fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#000
+    classDef server fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000
+    classDef redis fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
+    classDef aws fill:#e8eaf6,stroke:#3f51b5,stroke-width:3px,color:#000
+    
+    class C1,C2,C3 client
+    class ALB alb
+    class AS1,AS2 server
+    class R redis
+    class AWS aws
 ```
 
 **🔄 Redis Shared State Architecture:**
