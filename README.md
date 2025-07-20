@@ -1,407 +1,456 @@
-# Optimized Mamba-UNet with Multi-Kernel Positional Embedding (MKPE) Architecture Analysis
+# AWS Chat Application Monitoring and Load Testing using Grafan k6
+<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-15-45" src="https://github.com/user-attachments/assets/1b5d0f9b-e04a-4fd8-8d67-39c0ee1506dc" />
 
-## Overview
+## Lab Overview
 
-The **OptimizedMambaUNetWithMKPE** is a sophisticated deep learning architecture designed for image segmentation tasks, specifically optimized for the QaTa-COV19 dataset. This model combines the efficiency of MobileNet-inspired encoder blocks, the power of Mamba state-space models, and the precision of U-Net architecture with advanced positional embeddings.
+In this lab, we will deploy a real-time chat application to AWS using multiple EC2 instances behind an Application Load Balancer (ALB), then set up local monitoring and load testing to observe application behavior under normal conditions and during simulated failures.
 
-## Model Architecture Overview
+## Objectives
 
-```mermaid
-flowchart TD
-    A[Input Image 3×512×512] --> B[Optimized Encoder]
-    B --> C[Feature Maps 128×64×64]
-    B --> D[Skip Connections]
-    C --> E[Token Pool MaxPool2d]
-    E --> F[Bridge Down Conv 128→32]
-    F --> G[Reshape to Sequence b×hw×32]
-    G --> H[Mamba Blocks ×8]
-    H --> I[Reshape back to Feature Map]
-    I --> J[Bridge Up Conv 32→128]
-    J --> K[MKPE Enhancement]
-    K --> L[Interpolate to 64×64]
-    L --> M[Optimized Decoder]
-    D --> M
-    M --> N[Output Segmentation 2×512×512]
-    
-    style A fill:#e1f5fe
-    style N fill:#e8f5e8
-    style H fill:#fff3e0
-    style K fill:#f3e5f5
+1. **Deploy** a chat application to AWS EC2 instances with Redis backend
+2. **Configure** local Prometheus and Grafana monitoring to track application metrics
+3. **Set up** automated dashboard provisioning for real-time visualization
+4. **Perform** load testing using k6 to simulate WebSocket connections and message traffic
+5. **Observe** application behavior when both servers are healthy vs. when one server fails
+6. **Analyze** metrics and performance during chaos testing scenarios
+
+## What We're Monitoring
+
+- **Server Health**: Track if both chat servers are responding
+- **WebSocket Connections**: Monitor active connections across instances
+- **Message Traffic**: Observe message sending/receiving rates
+- **HTTP Performance**: Track request rates and response times
+- **Load Balancer**: Monitor ALB health and traffic distribution
+
+---
+
+## Part 1: Deploy Chat Application to AWS
+
+### 1.1 Clone and Deploy the Application
+### Repo Link - https://github.com/Jilan5/scaling-websocket-with-AWS-ALB.git
+Follow the deployment tutorial in the main repository to deploy the chat application using Pulumi. This will create:
+- 2 EC2 instances running the chat app
+- 1 EC2 instance running Redis  
+- Application Load Balancer distributing traffic
+- Security groups allowing HTTP (80) and WebSocket traffic
+
+```bash
+# Follow the deployment guide in the main repository
+# After deployment, note down:
+# - Server 1 public IP
+# - Server 2 public IP  
+# - Redis server public IP
+# - ALB DNS endpoint
 ```
 
-## 1. Encoder Architecture
+### 1.2 Verify Deployment
 
-The **OptimizedEncoder** implements a progressive feature extraction pipeline with mobile-inspired efficiency optimizations.
+```bash
+# Test your ALB endpoint
+curl http://your-alb-endpoint.elb.amazonaws.com/health
 
-### Encoder Flow Diagram
-
-```mermaid
-flowchart TD
-    A[Input 3×512×512] --> B[DepthwiseSeparableConv 3→24, stride=2]
-    B --> C[DepthwiseSeparableConv 24→48]
-    C --> D[InvertedResidual 48→48, expand=1]
-    D --> E[InvertedResidual 48→64, stride=2, expand=4]
-    E --> F[InvertedResidual 64→96, stride=2, expand=4]
-    F --> G[FireModule 96→64]
-    G --> H[FireModule 64→96]
-    H --> I[SqueezeExcitation 96]
-    I --> J[ASPP 96→128]
-    
-    %% Skip connections
-    C -.-> K[Skip Connection enc2]
-    E -.-> L[Skip Connection enc4]
-    G -.-> M[Skip Connection enc7]
-    A -.-> N[Skip Connection input]
-    
-    J --> O[Output Features 128×64×64]
-    
-    style A fill:#e1f5fe
-    style O fill:#e8f5e8
-    style K fill:#fff3e0
-    style L fill:#fff3e0
-    style M fill:#fff3e0
-    style N fill:#fff3e0
+# Verify both servers are accessible
+curl http://server1-ip:80/metrics
+curl http://server2-ip:80/metrics
 ```
 
-### Encoder Components Details
+---
 
-#### 1.1 Depthwise Separable Convolution
-```python
-class DepthwiseSeparableConv:
-    - Depthwise Conv: groups=in_channels
-    - Pointwise Conv: 1×1 kernel
-    - BatchNorm + ReLU6 activation
-    - Benefits: Reduced parameters and computational cost
+## Part 2: Set Up Local Monitoring
+
+### 2.1 Clone Monitoring Configuration
+
+```bash
+# Clone the monitoring configuration
+git clone <Current REPO>
+cd /monitoring
 ```
 
-#### 1.2 Inverted Residual Blocks
-```python
-class InvertedResidual:
-    - Expansion phase: 1×1 conv to expand channels
-    - Depthwise phase: 3×3 grouped conv
-    - Projection phase: 1×1 conv to reduce channels
-    - Residual connection when stride=1 and input=output channels
+### 2.2 Configure Prometheus Targets
+
+Update the `prometheus.yml` file with your actual EC2 public IPs and ALB endpoint:
+- Replace `YOUR_SERVER_1_IP` with Server 1 public IP
+- Replace `YOUR_SERVER_2_IP` with Server 2 public IP  
+- Replace `YOUR_ALB_ENDPOINT` with ALB DNS name
+- Replace `YOUR_REDIS_IP` with Redis server public IP
+
+```bash
+# Edit prometheus.yml file
+nano prometheus.yml
 ```
 
-#### 1.3 Fire Module (SqueezeNet inspired)
-```python
-class FireModule:
-    - Squeeze: 1×1 conv to reduce channels
-    - Expand: Parallel 1×1 and 3×3 convolutions
-    - Concatenation of expansion outputs
-    - Efficient feature representation
+### 2.3 Start Monitoring Stack
+
+```bash
+# Launch Prometheus and Grafana
+docker-compose up -d
+
+# Verify containers are running
+docker ps
+
+# Check Prometheus is scraping targets
+curl http://localhost:9090/targets
 ```
 
-#### 1.4 Squeeze-and-Excitation (SE) Module
-```python
-class SqueezeExcitation:
-    - Global Average Pooling
-    - FC layers for channel attention
-    - Sigmoid activation for gating
-    - Channel-wise feature recalibration
+### 2.4 Configure Grafana Dashboard
+
+```bash
+# Wait for Grafana to start, then run the configuration script
+chmod +x configure-grafana.sh
+./configure-grafana.sh
+
+# Access Grafana
+# URL: http://localhost:3000
+# Username: admin
+# Password: admin123
 ```
 
-#### 1.5 Atrous Spatial Pyramid Pooling (ASPP)
-```python
-class ASPP:
-    - Multiple dilated convolutions: rates=[4, 8]
-    - Global average pooling branch
-    - Multi-scale feature extraction
-    - Feature fusion for rich contextual information
+### **Case 1: Grafana Dashboard - Both Servers Running**
+<img width="1907" height="926" alt="Screenshot from 2025-07-14 18-52-42" src="https://github.com/user-attachments/assets/a33bac40-c9bf-486c-9098-cf0a9c6e3338" />
+<img width="1866" height="971" alt="Screenshot from 2025-07-14 18-54-04" src="https://github.com/user-attachments/assets/493e6a79-fb33-45bc-88f2-13bc748496c9" />
+
+
+
+
+---
+
+## Part 3: Chaos Testing - Simulate Server Failure
+
+### 3.1 Stop One Server Instance
+
+```bash
+# SSH to one of your EC2 instances
+ssh -i your-key.pem ubuntu@server-2-ip
+
+# Stop the chat application container
+sudo docker stop chat-app-container-name
+
+# Or stop the entire instance from AWS Console
 ```
 
-### Encoder Feature Progression
+### 3.2 Observe Metrics During Failure
 
-| Layer | Input Size | Output Size | Channels | Key Operation |
-|-------|------------|-------------|----------|---------------|
-| conv1 | 512×512×3 | 256×256×24 | 3→24 | DepthwiseSeparable, stride=2 |
-| conv2 | 256×256×24 | 256×256×48 | 24→48 | DepthwiseSeparable |
-| block1 | 256×256×48 | 256×256×48 | 48→48 | InvertedResidual, expand=1 |
-| block2 | 256×256×48 | 128×128×64 | 48→64 | InvertedResidual, stride=2, expand=4 |
-| block4 | 128×128×64 | 64×64×96 | 64→96 | InvertedResidual, stride=2, expand=4 |
-| fire1 | 64×64×96 | 64×64×64 | 96→64 | FireModule compression |
-| fire2 | 64×64×64 | 64×64×96 | 64→96 | FireModule expansion |
-| SE | 64×64×96 | 64×64×96 | - | Channel attention |
-| ASPP | 64×64×96 | 64×64×128 | 96→128 | Multi-scale features |
+```bash
+# Check Prometheus targets status
+curl http://localhost:9090/api/v1/targets | grep health
 
-## 2. Mamba Integration (Bottleneck)
-
-The core innovation lies in the integration of Mamba state-space models in the bottleneck.
-
-### Mamba Processing Flow
-
-```mermaid
-flowchart TD
-    A[Feature Maps 128×64×64] --> B[MaxPool2d scale=4]
-    B --> C[Features 128×16×16]
-    C --> D[Bridge Down Conv 128→32]
-    D --> E[Features 32×16×16]
-    E --> F[Reshape to Sequence b×256×32]
-    F --> G[Mamba Block 1]
-    G --> H[Mamba Block 2]
-    H --> I[... 8 blocks total]
-    I --> J[Mamba Block 8]
-    J --> K[Reshape to 32×16×16]
-    K --> L[Bridge Up Conv 32→128]
-    L --> M[MKPE Enhancement]
-    M --> N[Interpolate to 64×64]
-    
-    style F fill:#fff3e0
-    style G fill:#fff3e0
-    style H fill:#fff3e0
-    style I fill:#fff3e0
-    style J fill:#fff3e0
-    style M fill:#f3e5f5
+# Monitor Grafana dashboard for changes
+# Watch for:
+# - Server health status changes
+# - Traffic redistribution to remaining server
+# - Connection handling behavior
 ```
 
-### Mamba Block Architecture
+### **Case 2: Grafana Dashboard - One Server Down**
+<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-15-45" src="https://github.com/user-attachments/assets/ace1fc9e-f821-45d0-b227-d802ab395694" />
+<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-15-58" src="https://github.com/user-attachments/assets/f843226a-1fa6-48b7-bf29-3039557cea66" />
 
-```mermaid
-flowchart TD
-    A[Input Sequence b×256×32] --> B[LayerNorm]
-    B --> C[MambaBlock]
-    C --> D[Dropout 0.1]
-    D --> E[Residual Connection]
-    E --> F[LayerNorm]
-    A --> E
-    
-    subgraph MambaBlock
-        G[Input Projection 32→128] --> H[Split x & residual]
-        H --> I[Conv1D kernel=6, groups=32]
-        I --> J[SiLU Activation]
-        J --> K[State Projection]
-        K --> L[Selective Scan SSM]
-        L --> M[Element-wise with residual]
-        M --> N[Output Projection 32→32]
-    end
-    
-    C --> G
-    N --> D
-    
-    style L fill:#fff3e0
-    style E fill:#e8f5e8
+
+
+---
+
+## Part 4: Load Testing with k6
+
+### 4.1 Install k6
+
+```bash
+# On Ubuntu/Debian
+sudo gpg -k
+sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+sudo apt-get update
+sudo apt-get install k6
+
+# On macOS
+brew install k6
+
+# On Windows
+choco install k6
 ```
 
-### Selective Scan State Space Model
+### 4.2 Configure Load Test Script
 
-The core of Mamba lies in the selective scan mechanism:
+Update the `cloud-ws-test.js` file with your actual ALB endpoint:
+- Replace `ALB_ENDPOINT` with your actual ALB DNS name
+- Verify the WebSocket path matches your application (common patterns: /ws, /websocket, /socket.io)
 
-```mermaid
-flowchart LR
-    A[Input u] --> B[Delta Δ Projection]
-    A --> C[B Matrix]
-    A --> D[C Matrix]
-    B --> E[Selective Scan]
-    C --> E
-    D --> E
-    F[A Matrix] --> E
-    G[D Skip] --> H[Output y]
-    E --> H
-    A --> G
-    
-    style E fill:#fff3e0
-    style H fill:#e8f5e8
+```bash
+# Edit the k6 test script
+nano cloud-ws-test.js
 ```
 
-**Mathematical Formulation:**
-- **State Equation:** h(t) = Ah(t-1) + Bu(t)
-- **Output Equation:** y(t) = Ch(t) + Du(t)
-- **Selective Mechanism:** Δ, B, C are input-dependent parameters
+### 4.3 Run Load Tests
 
-## 3. Multi-Kernel Positional Embedding (MKPE)
+```bash
+# Test with both servers running
+k6 run cloud-ws-test.js
 
-MKPE enhances feature representations through multi-scale positional awareness.
+# Simulate server failure during test (stop one server mid-test)
+# Run test again and observe behavior
 
-### MKPE Architecture
-
-```mermaid
-flowchart TD
-    A[Input Features] --> B[Conv 3×3]
-    A --> C[Conv 5×5]
-    B --> D[Concatenate]
-    C --> D
-    D --> E[Position Attention Module]
-    E --> F[1×1 Conv]
-    F --> G[BatchNorm]
-    G --> H[ReLU]
-    H --> I[1×1 Conv]
-    I --> J[Sigmoid]
-    J --> K[Element-wise Multiply]
-    A --> K
-    K --> L[Enhanced Features]
-    
-    style E fill:#f3e5f5
-    style K fill:#e8f5e8
+# For cloud testing (optional)
+k6 cloud cloud-ws-test.js
 ```
 
-## 4. Decoder Architecture
+**Case 3: k6 Load Test Results**
+<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-38-22" src="https://github.com/user-attachments/assets/d3039a41-8b8e-4301-9306-e73ae06ef682" />
+<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-46-09" src="https://github.com/user-attachments/assets/28ec40be-cb5a-46e8-9641-1d35aae09cdb" />
 
-The **OptimizedDecoder** implements progressive upsampling with enhanced skip connections.
 
-### Decoder Flow Diagram
 
-```mermaid
-flowchart TD
-    A[Bottleneck Features 128×64×64] --> B[Upsample ×2 + AsymmetricConv 128→64]
-    C[Skip enc7 64×64×64] --> D[EnhancedSkipConnection]
-    B --> D
-    D --> E[Features 64×128×128]
-    E --> F[Dropout 0.1]
-    F --> G[Upsample ×2 + AsymmetricConv 64→32]
-    
-    H[Skip enc4 64×128×128] --> I[EnhancedSkipConnection]
-    G --> I
-    I --> J[Features 32×256×256]
-    J --> K[Dropout 0.1]
-    K --> L[Upsample ×2 + AsymmetricConv 32→16]
-    
-    M[Skip enc2 48×256×256] --> N[EnhancedSkipConnection]
-    L --> N
-    N --> O[Features 16×512×512]
-    O --> P[Dropout 0.1]
-    P --> Q[1×1 Conv 16→2]
-    Q --> R[Output MKPE]
-    R --> S[Final Segmentation 2×512×512]
-    
-    style D fill:#fff3e0
-    style I fill:#fff3e0
-    style N fill:#fff3e0
-    style R fill:#f3e5f5
-    style S fill:#e8f5e8
+---
+
+## Part 5: Understanding PromQL and Metrics
+
+### 5.1 What is PromQL?
+
+**PromQL (Prometheus Query Language)** is the query language used by Prometheus to select and aggregate time series data. It allows you to:
+
+- **Query metrics:** Ask Prometheus for specific metrics data
+- **Filter data:** Use labels to filter results (job, instance, status)
+- **Aggregate data:** Sum, average, or find min/max values over time
+- **Create expressions:** Perform mathematical operations on metrics
+- **Analyze trends:** Calculate rates, increases, and changes over time
+
+### 5.2 Metrics Documentation
+
+Our chat application exposes several custom metrics that we can query with PromQL:
+
+#### Custom Application Metrics
+
+| Metric Name | Type | Description | Labels | Example PromQL |
+|-------------|------|-------------|--------|----------------|
+| `http_requests_total` | Counter | Total HTTP requests | method, endpoint, status_code | `sum(rate(http_requests_total[5m]))` |
+| `app_uptime_seconds` | Gauge | Application uptime | none | `app_uptime_seconds` |
+| `websocket_connections_total` | Gauge | Active WebSocket connections | instance_id | `sum(websocket_connections_total)` |
+| `websocket_messages_total` | Counter | WebSocket messages processed | direction, instance_id | `rate(websocket_messages_total[1m])` |
+| `background_task_execution_seconds` | Histogram | Background task execution time | none | `histogram_quantile(0.95, background_task_execution_seconds_bucket)` |
+
+#### System Metrics (Auto-exported)
+
+| Metric Name | Type | Description | Example PromQL |
+|-------------|------|-------------|----------------|
+| `up` | Gauge | Target availability (1=up, 0=down) | `up{job="app-server-1"}` |
+| `python_gc_objects_collected_total` | Counter | Python garbage collection stats | `rate(python_gc_objects_collected_total[5m])` |
+| `process_resident_memory_bytes` | Gauge | Process memory usage | `process_resident_memory_bytes / 1024 / 1024` |
+| `process_cpu_seconds_total` | Counter | CPU time consumed | `rate(process_cpu_seconds_total[5m]) * 100` |
+
+### 5.3 Viewing Metrics in Prometheus (Port 9090)
+
+Access Prometheus web interface at `http://localhost:9090` to explore and visualize metrics:
+
+#### Step 1: Basic Metric Queries
+```bash
+# Open Prometheus web UI
+http://localhost:9090
+
+# Try these basic queries in the expression browser:
 ```
 
-### Enhanced Skip Connection
+**Simple Queries:**
+- `http_requests_total` - Show all HTTP request counters
+- `up` - Show which targets are up/down
+- `app_uptime_seconds` - Show application uptime
 
-```mermaid
-flowchart TD
-    A[Skip Features] --> B[1×1 Conv Adaptation]
-    C[Upsampled Features] --> D[1×1 Conv Adaptation]
-    B --> E[Concatenate]
-    D --> E
-    E --> F[Spatial Attention]
-    F --> G[3×3 Fusion Conv]
-    G --> H[BatchNorm + ReLU]
-    
-    style F fill:#f3e5f5
-    style H fill:#e8f5e8
+**Screenshot Space: Prometheus Query Interface**
+![Prometheus Basic Query](screenshots/prometheus-basic-query.png)
+
+#### Step 2: Advanced PromQL Queries
+```promql
+# HTTP request rate per second (last 5 minutes)
+sum(rate(http_requests_total[5m]))
+
+# Error rate percentage
+sum(rate(http_requests_total{status_code=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) * 100
+
+# WebSocket connections by instance
+sum by (instance_id) (websocket_connections_total)
+
+# Memory usage in MB
+process_resident_memory_bytes / 1024 / 1024
+
+# CPU usage percentage
+rate(process_cpu_seconds_total[5m]) * 100
 ```
 
-### Decoder Feature Progression
+**Screenshot Space: Prometheus Advanced Queries**
+![Prometheus Advanced Query](screenshots/prometheus-advanced-query.png)
 
-| Stage | Input Size | Output Size | Skip Size | Operation |
-|-------|------------|-------------|-----------|-----------|
-| Up1 | 128×64×64 | 64×128×128 | 64×128×128 | Bilinear + AsymmetricConv |
-| Up2 | 64×128×128 | 32×256×256 | 64×256×256 | Bilinear + AsymmetricConv |
-| Up3 | 32×256×256 | 16×512×512 | 48×512×512 | Bilinear + AsymmetricConv |
-| Classifier | 16×512×512 | 2×512×512 | - | 1×1 Conv + MKPE |
+#### Step 3: Using Graph View
+- Click the "Graph" tab to see time series visualization
+- Adjust time range using the time picker
+- Add multiple queries to compare metrics
 
-## 5. Loss Function Architecture
+**Screenshot Space: Prometheus Graph View**
+![Prometheus Graph View](screenshots/prometheus-graph-view.png)
 
-The model uses a sophisticated **CombinedLoss** function:
+### 5.4 Building Custom Grafana Dashboard from PromQL
 
-```mermaid
-flowchart TD
-    A[Predictions] --> B[Cross Entropy Loss]
-    A --> C[Dice Loss]
-    A --> D[Focal Loss]
-    
-    B --> E[Weighted Combination]
-    C --> E
-    D --> E
-    
-    E --> F[Final Loss]
-    
-    subgraph Weights
-        G[CE: 0.2]
-        H[Dice: 3.0]
-        I[Focal: 1.0]
-    end
-    
-    G --> E
-    H --> E
-    I --> E
-    
-    style F fill:#ffebee
+Instead of importing a pre-built dashboard, you can create your own using the PromQL queries:
+
+#### Step 1: Create New Dashboard
+```bash
+# Access Grafana
+http://localhost:3000
+# Username: admin, Password: admin123
+
+# 1. Click "+" → "Dashboard"
+# 2. Click "Add new panel"
+# 3. Select Prometheus as data source
 ```
 
-**Loss Components:**
-- **Cross Entropy:** Class-weighted [0.2, 0.8] for background/foreground
-- **Dice Loss:** Focuses on overlap, weighted [0.3, 0.7] for classes
-- **Focal Loss:** Addresses class imbalance with α=0.25, γ=2.0
+#### Step 2: Add Panels with Custom PromQL
 
-## 6. Model Parameters and Complexity
-
-### Parameter Count Breakdown
-
-| Component | Parameters | Percentage |
-|-----------|------------|------------|
-| Encoder | ~1.2M | 35% |
-| Mamba Blocks (×8) | ~1.8M | 52% |
-| Decoder | ~0.3M | 9% |
-| MKPE Modules | ~0.1M | 3% |
-| **Total** | **~3.4M** | **100%** |
-
-### Model Arguments Configuration
-
-```python
-class ModelArgs:
-    model_input_dims = 32          # Mamba input dimension
-    model_states = 32              # SSM state dimension
-    projection_expand_factor = 2    # Internal dimension multiplier
-    conv_kernel_size = 6           # 1D conv kernel size
-    num_layers = 8                 # Number of Mamba blocks
-    dropout_rate = 0.1             # Dropout probability
-    num_classes = 2                # Segmentation classes
-    delta_t_rank = 2               # Delta parameter rank
+**Panel 1: Server Health Status**
+```promql
+# Query: up{job=~"app-server-.*"}
+# Visualization: Stat
+# Value mappings: 0=DOWN, 1=UP
+# Thresholds: Red=0, Green=1
 ```
 
-## 7. Key Innovations and Advantages
+**Panel 2: HTTP Request Rate**
+```promql
+# Query: sum(rate(http_requests_total[5m]))
+# Visualization: Time series
+# Unit: requests/sec
+```
 
-### 7.1 Architectural Innovations
-- **Mamba Integration:** First application of state-space models in U-Net architecture
-- **MKPE Enhancement:** Multi-kernel positional embeddings for better spatial awareness
-- **Mobile-Inspired Encoder:** Efficient feature extraction with depthwise separable convolutions
-- **Enhanced Skip Connections:** Spatial attention-based feature fusion
+**Panel 3: WebSocket Connections**
+```promql
+# Query: sum(websocket_connections_total)
+# Visualization: Stat
+# Unit: short
+```
 
-### 7.2 Computational Advantages
-- **Linear Complexity:** Mamba provides O(L) complexity vs. O(L²) for attention
-- **Memory Efficiency:** Depthwise separable convolutions reduce parameters
-- **Progressive Downsampling:** Efficient spatial dimension reduction
-- **Gradient Checkpointing:** Memory-efficient training for Mamba blocks
+**Panel 4: Error Rate**
+```promql
+# Query: sum(rate(http_requests_total{status_code=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) * 100
+# Visualization: Time series
+# Unit: percent
+# Thresholds: Green=0-1%, Yellow=1-5%, Red=>5%
+```
 
-### 7.3 Performance Benefits
-- **Multi-Scale Features:** ASPP and MKPE capture features at different scales
-- **Robust Loss Function:** Combined loss addresses multiple segmentation challenges
-- **Adaptive Attention:** SE modules and spatial attention improve feature selection
-- **Residual Learning:** Skip connections preserve fine-grained details
+**Screenshot Space: Grafana Panel Creation**
+![Grafana New Panel Creation](screenshots/grafana-new-panel.png)
 
-## 8. Training Configuration
+#### Step 3: Configure Panel Options
+```bash
+# For each panel:
+# 1. Set title and description
+# 2. Configure visualization type
+# 3. Set units and decimal places
+# 4. Add thresholds for color coding
+# 5. Set refresh interval
+```
 
-### Optimizer and Scheduler
-- **Optimizer:** AdamW with lr=0.0005, weight_decay=1e-5
-- **Scheduler:** Cosine annealing with warmup (7 epochs)
-- **Batch Size:** 8 (with gradient accumulation)
-- **Mixed Precision:** Automatic mixed precision training
+**Screenshot Space: Grafana Panel Configuration**
+![Grafana Panel Configuration](screenshots/grafana-panel-config.png)
 
-### Data Augmentation Pipeline
-- **Geometric:** Horizontal/vertical flip, rotation (±15°)
-- **Photometric:** Brightness/contrast adjustment
-- **Spatial:** Random cropping and resizing
-- **Noise:** Gaussian blur with probability 0.7
+#### Step 4: Save Dashboard
+```bash
+# 1. Click "Save dashboard" (top right)
+# 2. Enter dashboard name: "Custom Chat App Monitoring"
+# 3. Add description and tags
+# 4. Click "Save"
+```
 
-## 9. Evaluation Metrics
+**Screenshot Space: Custom Dashboard Result**
+![Grafana Custom Dashboard](screenshots/grafana-custom-dashboard.png)
 
-The model is evaluated using comprehensive metrics:
+### 5.5 PromQL Best Practices
 
-- **IoU (Intersection over Union):** Primary metric for segmentation quality
-- **Dice Coefficient:** Overlap-based similarity measure
-- **Sensitivity (Recall):** True positive rate
-- **Specificity:** True negative rate
-- **F1 Score:** Harmonic mean of precision and recall
-- **Accuracy:** Overall pixel-wise accuracy
+**Rate Functions:**
+- Use `rate()` for counters to get per-second rates
+- Use `increase()` for counters to get total increase over time
+- Use `irate()` for instant rate (last two data points)
 
-## Conclusion
+**Aggregation:**
+- `sum()` - Add values together
+- `avg()` - Calculate average
+- `max()`/`min()` - Find maximum/minimum
+- `count()` - Count number of series
 
-The OptimizedMambaUNetWithMKPE represents a significant advancement in medical image segmentation, combining the efficiency of mobile architectures, the power of state-space models, and the precision of attention mechanisms. The architecture achieves state-of-the-art performance on the QaTa-COV19 dataset while maintaining computational efficiency and memory effectiveness.
+**Time Ranges:**
+- `[5m]` - Last 5 minutes
+- `[1h]` - Last 1 hour
+- `[1d]` - Last 1 day
 
-The integration of Mamba blocks in the bottleneck provides superior long-range dependency modeling compared to traditional CNN-based approaches, while the multi-kernel positional embeddings enhance spatial feature representation throughout the network.
+**Label Filtering:**
+- `{job="app-server-1"}` - Exact match
+- `{status_code=~"5.."}` - Regex match (5xx errors)
+- `{instance!="localhost"}` - Not equal
+
+---
+
+## Part 6: Analysis and Observations
+
+### 6.1 Expected Behaviors
+
+- **Both Servers Healthy**: Load distributed across both instances
+- **One Server Down**: All traffic redirected to healthy server
+- **Load Testing**: WebSocket connections and message rates visible in dashboard
+- **Recovery**: Metrics return to normal when failed server is restored
+
+---
+
+## Cleanup
+
+```bash
+# Stop monitoring stack
+docker-compose down
+
+# Remove volumes (optional)
+docker-compose down -v
+
+# Clean up AWS resources
+# - Terminate EC2 instances
+# - Delete Load Balancer
+# - Clean up security groups
+```
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+**Prometheus can't reach targets:**
+- Check security groups allow port 80
+- Verify EC2 instances are running  
+- Check /metrics endpoint accessibility
+
+**Grafana dashboard not loading:**
+- Run configure-grafana.sh again
+- Check Grafana logs: `docker logs monitoring-grafana-1`
+
+**k6 WebSocket connection fails:**
+- Verify WebSocket path (/ws)
+- Check ALB configuration for WebSocket support
+- Test WebSocket manually with wscat
+
+### Verification Commands
+
+```bash
+# Test individual components
+curl http://server-ip:80/health
+curl http://server-ip:80/metrics
+curl http://alb-endpoint/health
+
+# Test WebSocket manually
+npm install -g wscat
+wscat -c ws://your-alb-endpoint/ws/test-client
+```
+
+---
+
+## Lab Summary
+
+This lab demonstrates:
+- Real-world application deployment patterns
+- Infrastructure monitoring best practices
+- Chaos engineering techniques
+- Load testing methodologies
+- Observability and alerting setup
+
+You now have a complete monitoring and testing pipeline for distributed applications running on AWS infrastructure.
