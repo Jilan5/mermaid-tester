@@ -322,7 +322,39 @@ chmod +x configure-grafana.sh
 ## Part 4: Chaos Testing - Grafana K6
 <img width="2390" height="819" alt="image" src="https://github.com/user-attachments/assets/7465ad8d-d2a5-4be4-ba66-03e5cc5e5d95" />
 
-### Test Scenario Overview
+### 4.1 Install k6
+
+**On Ubuntu/Debian:**
+```bash
+sudo gpg -k
+sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+sudo apt-get update
+sudo apt-get install k6
+```
+
+**On macOS:**
+```bash
+brew install k6
+```
+
+**On Windows:**
+```bash
+choco install k6
+```
+
+### 4.2 Configure Load Test Script
+
+Update the `cloud-ws-test.js` file with your actual ALB endpoint:
+- Replace `ALB_ENDPOINT` with your actual ALB DNS name
+- Verify the WebSocket path matches your application (common patterns: /ws, /websocket, /socket.io)
+
+```bash
+# Edit the k6 test script
+nano cloud-ws-test.js
+```
+
+### 4.3 Test Scenario Overview
 
 Our chaos testing scenario simulates real-world failure conditions while monitoring system behavior:
 
@@ -352,9 +384,14 @@ export const options = {
 3. Observe real-time impact on metrics and user experience
 4. Monitor recovery when server comes back online
 
-### Case 1: Baseline Performance (Both Servers Healthy)
+### 4.4 Case 1: Baseline Performance (Both Servers Healthy)
 
 First establish baseline performance before introducing chaos:
+
+```bash
+# Run baseline test
+k6 run cloud-ws-test.js
+```
 
 **Expected Behavior:**
 - Load distributed across both app servers
@@ -366,16 +403,9 @@ First establish baseline performance before introducing chaos:
 <img width="1907" height="926" alt="Screenshot from 2025-07-14 18-52-42" src="https://github.com/user-attachments/assets/a33bac40-c9bf-486c-9098-cf0a9c6e3338" />
 <img width="1866" height="971" alt="Screenshot from 2025-07-14 18-54-04" src="https://github.com/user-attachments/assets/493e6a79-fb33-45bc-88f2-13bc748496c9" />
 
-
-```bash
-# Run baseline test
-k6 run cloud-ws-test.js
-```
-
 Monitor your Grafana dashboard during baseline to observe normal patterns.
 
-### Case 2: Server Failure Under Load
-<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-38-22" src="https://github.com/user-attachments/assets/d3039a41-8b8e-4301-9306-e73ae06ef682" />
+### 4.5 Case 2: Server Failure Under Load
 
 Now simulate server failure while under active load:
 
@@ -394,11 +424,32 @@ sudo docker stop chat-app-container-name
 - Some WebSocket connections may drop
 - System should recover and continue serving requests
 
+**Case 2: k6 Load Test Results - Server Failure**
+<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-38-22" src="https://github.com/user-attachments/assets/d3039a41-8b8e-4301-9306-e73ae06ef682" />
+
 **Case 2: Grafana Dashboard - One Server Down**
 <img width="1919" height="933" alt="Screenshot from 2025-07-14 19-15-45" src="https://github.com/user-attachments/assets/ace1fc9e-f821-45d0-b227-d802ab395694" />
 <img width="1919" height="933" alt="Screenshot from 2025-07-14 19-15-58" src="https://github.com/user-attachments/assets/f843226a-1fa6-48b7-bf29-3039557cea66" />
 
-### 4.4 Observe Metrics During Failure
+### 4.6 Case 3: Recovery and Additional Load Testing
+
+Test system recovery and explore additional scenarios:
+
+```bash
+# Test with both servers running again
+k6 run cloud-ws-test.js
+
+# Simulate server failure during test (stop one server mid-test)
+# Run test again and observe behavior
+
+# For cloud testing (optional)
+k6 cloud cloud-ws-test.js
+```
+
+**Case 3: k6 Load Test Results - Recovery**
+<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-46-09" src="https://github.com/user-attachments/assets/28ec40be-cb5a-46e8-9641-1d35aae09cdb" />
+
+### 4.7 Observe Metrics During Failure
 
 Monitor real-time changes in your dashboards:
 
@@ -421,62 +472,9 @@ curl http://localhost:9090/api/v1/targets | grep health
 
 ---
 
-## Part 5: Load Testing with k6
+## Part 5: Analysis and Observations
 
-### 5.1 Install k6
-
-```bash
-# On Ubuntu/Debian
-sudo gpg -k
-sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
-sudo apt-get update
-sudo apt-get install k6
-
-# On macOS
-brew install k6
-
-# On Windows
-choco install k6
-```
-
-### 5.2 Configure Load Test Script
-
-Update the `cloud-ws-test.js` file with your actual ALB endpoint:
-- Replace `ALB_ENDPOINT` with your actual ALB DNS name
-- Verify the WebSocket path matches your application (common patterns: /ws, /websocket, /socket.io)
-
-```bash
-# Edit the k6 test script
-nano cloud-ws-test.js
-```
-
-### 5.3 Run Load Tests
-
-```bash
-# Test with both servers running
-k6 run cloud-ws-test.js
-
-# Simulate server failure during test (stop one server mid-test)
-# Run test again and observe behavior
-
-# For cloud testing (optional)
-k6 cloud cloud-ws-test.js
-```
-
-**Case 3: k6 Load Test Results**
-<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-38-22" src="https://github.com/user-attachments/assets/d3039a41-8b8e-4301-9306-e73ae06ef682" />
-<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-46-09" src="https://github.com/user-attachments/assets/28ec40be-cb5a-46e8-9641-1d35aae09cdb" />
-
-
-
-- `{instance!="localhost"}` - Not equal
-
----
-
-## Part 6: Analysis and Observations
-
-### 6.1 Expected Behaviors
+### 5.1 Expected Behaviors
 
 - **Both Servers Healthy**: Load distributed across both instances
 - **One Server Down**: All traffic redirected to healthy server
@@ -485,7 +483,7 @@ k6 cloud cloud-ws-test.js
 
 ---
 
-## Cleanup
+## Part 6: Cleanup
 
 ```bash
 # Stop monitoring stack
