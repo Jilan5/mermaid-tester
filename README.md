@@ -1,18 +1,4 @@
 # AWS Chat Application Monitoring and Load Testing using Grafan k6
-<### 2.3 Configure Prometheus Targets
-
-Update the `prometheus.yml` file with your actual EC2 public IPs and ALB endpoint:
-- Replace `YOUR_SERVER_1_IP` with Server 1 public IP
-- Replace `YOUR_SERVER_2_IP` with Server 2 public IP  
-- Replace `YOUR_ALB_ENDPOINT` with ALB DNS name
-- Replace `YOUR_REDIS_IP` with Redis server public IP
-
-```bash
-# Edit prometheus.yml file
-nano prometheus.yml
-```
-
-### 2.4 Start Monitoring Stack9" height="933" alt="Screenshot from 2025-07-14 19-15-45" src="https://github.com/user-attachments/assets/1b5d0f9b-e04a-4fd8-8d67-39c0ee1506dc" />
 
 ## Lab Overview
 
@@ -37,7 +23,7 @@ In this lab, we will deploy a real-time chat application to AWS using multiple E
 
 ---
 
-## Part 1: Deploy Chat Application to AWS
+## Part 1: Deploy Chat Application and Set Up Monitoring Configuration
 
 ### 1.1 Clone and Deploy the Application
 ### Repo Link - https://github.com/Jilan5/scaling-websocket-with-AWS-ALB.git
@@ -67,11 +53,7 @@ curl http://server1-ip:80/metrics
 curl http://server2-ip:80/metrics
 ```
 
----
-
-## Part 2: Set Up Local Monitoring
-
-### 2.1 Clone Monitoring Configuration
+### 1.3 Clone Monitoring Configuration
 
 ```bash
 # Clone the monitoring configuration
@@ -79,7 +61,7 @@ git clone <Current REPO>
 cd /monitoring
 ```
 
-### 2.2 Navigate to Monitoring Directory
+### 1.4 Navigate to Monitoring Directory
 
 ```bash
 # Change to the monitoring directory
@@ -89,7 +71,7 @@ cd tmp/monitoring
 ls -la
 ```
 
-### 2.3 Configure Prometheus Targets
+### 1.5 Configure Prometheus Targets
 
 Update the `prometheus.yml` file with your actual EC2 public IPs and ALB endpoint:
 - Replace `YOUR_SERVER_1_IP` with Server 1 public IP
@@ -102,7 +84,7 @@ Update the `prometheus.yml` file with your actual EC2 public IPs and ALB endpoin
 nano prometheus.yml
 ```
 
-### 2.4 Start Monitoring Stack
+### 1.6 Start Monitoring Stack
 
 ```bash
 # Launch Prometheus and Grafana
@@ -115,9 +97,11 @@ docker ps
 curl http://localhost:9090/targets
 ```
 
-### 2.5 Understanding PromQL and Metrics
+---
 
-#### 2.5.1 What is PromQL?
+## Part 2: Understanding PromQL and Metrics
+
+### 2.1 What is PromQL?
 
 **PromQL (Prometheus Query Language)** is the query language used by Prometheus to select and aggregate time series data. It allows you to:
 
@@ -127,322 +111,7 @@ curl http://localhost:9090/targets
 - **Create expressions:** Perform mathematical operations on metrics
 - **Analyze trends:** Calculate rates, increases, and changes over time
 
-#### 2.5.2 Metrics Documentation
-
-Our chat application exposes several custom metrics that we can query with PromQL:
-
-##### Custom Application Metrics
-
-| Metric Name | Type | Description | Labels | Example PromQL |
-|-------------|------|-------------|--------|----------------|
-| `http_requests_total` | Counter | Total HTTP requests | method, endpoint, status_code | `sum(rate(http_requests_total[5m]))` |
-| `app_uptime_seconds` | Gauge | Application uptime | none | `app_uptime_seconds` |
-| `websocket_connections_total` | Gauge | Active WebSocket connections | instance_id | `sum(websocket_connections_total)` |
-| `websocket_messages_total` | Counter | WebSocket messages processed | direction, instance_id | `rate(websocket_messages_total[1m])` |
-| `background_task_execution_seconds` | Histogram | Background task execution time | none | `histogram_quantile(0.95, background_task_execution_seconds_bucket)` |
-
-##### System Metrics (Auto-exported)
-
-| Metric Name | Type | Description | Example PromQL |
-|-------------|------|-------------|----------------|
-| `up` | Gauge | Target availability (1=up, 0=down) | `up{job="app-server-1"}` |
-| `python_gc_objects_collected_total` | Counter | Python garbage collection stats | `rate(python_gc_objects_collected_total[5m])` |
-| `process_resident_memory_bytes` | Gauge | Process memory usage | `process_resident_memory_bytes / 1024 / 1024` |
-| `process_cpu_seconds_total` | Counter | CPU time consumed | `rate(process_cpu_seconds_total[5m]) * 100` |
-
-#### 2.5.3 Viewing Metrics in Prometheus (Port 9090)
-
-Access Prometheus web interface at `http://localhost:9090` to explore and visualize metrics:
-
-##### Step 1: Basic Metric Queries
-```bash
-# Open Prometheus web UI
-http://localhost:9090
-
-# Try these basic queries in the expression browser:
-```
-
-**Simple Queries:**
-- `http_requests_total` - Show all HTTP request counters
-- `up` - Show which targets are up/down
-- `app_uptime_seconds` - Show application uptime
-
-**Screenshot Space: Prometheus Query Interface**
-![Prometheus Basic Query](screenshots/prometheus-basic-query.png)
-
-##### Step 2: Advanced PromQL Queries
-```promql
-# HTTP request rate per second (last 5 minutes)
-sum(rate(http_requests_total[5m]))
-
-# Error rate percentage
-sum(rate(http_requests_total{status_code=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) * 100
-
-# WebSocket connections by instance
-sum by (instance_id) (websocket_connections_total)
-
-# Memory usage in MB
-process_resident_memory_bytes / 1024 / 1024
-
-# CPU usage percentage
-rate(process_cpu_seconds_total[5m]) * 100
-```
-
-**Screenshot Space: Prometheus Advanced Queries**
-![Prometheus Advanced Query](screenshots/prometheus-advanced-query.png)
-
-##### Step 3: Using Graph View
-- Click the "Graph" tab to see time series visualization
-- Adjust time range using the time picker
-- Add multiple queries to compare metrics
-
-**Screenshot Space: Prometheus Graph View**
-![Prometheus Graph View](screenshots/prometheus-graph-view.png)
-
-#### 2.5.4 Building Custom Grafana Dashboard from PromQL
-
-Instead of importing a pre-built dashboard, you can create your own using the PromQL queries:
-
-##### Step 1: Create New Dashboard
-```bash
-# Access Grafana
-http://localhost:3000
-# Username: admin, Password: admin123
-
-# 1. Click "+" → "Dashboard"
-# 2. Click "Add new panel"
-# 3. Select Prometheus as data source
-```
-
-##### Step 2: Add Panels with Custom PromQL
-
-**Panel 1: Server Health Status**
-```promql
-# Query: up{job=~"app-server-.*"}
-# Visualization: Stat
-# Value mappings: 0=DOWN, 1=UP
-# Thresholds: Red=0, Green=1
-```
-
-**Panel 2: HTTP Request Rate**
-```promql
-# Query: sum(rate(http_requests_total[5m]))
-# Visualization: Time series
-# Unit: requests/sec
-```
-
-**Panel 3: WebSocket Connections**
-```promql
-# Query: sum(websocket_connections_total)
-# Visualization: Stat
-# Unit: short
-```
-
-**Panel 4: Error Rate**
-```promql
-# Query: sum(rate(http_requests_total{status_code=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) * 100
-# Visualization: Time series
-# Unit: percent
-# Thresholds: Green=0-1%, Yellow=1-5%, Red=>5%
-```
-
-**Screenshot Space: Grafana Panel Creation**
-![Grafana New Panel Creation](screenshots/grafana-new-panel.png)
-
-##### Step 3: Configure Panel Options
-```bash
-# For each panel:
-# 1. Set title and description
-# 2. Configure visualization type
-# 3. Set units and decimal places
-# 4. Add thresholds for color coding
-# 5. Set refresh interval
-```
-
-**Screenshot Space: Grafana Panel Configuration**
-![Grafana Panel Configuration](screenshots/grafana-panel-config.png)
-
-##### Step 4: Save Dashboard
-```bash
-# 1. Click "Save dashboard" (top right)
-# 2. Enter dashboard name: "Custom Chat App Monitoring"
-# 3. Add description and tags
-# 4. Click "Save"
-```
-
-**Screenshot Space: Custom Dashboard Result**
-![Grafana Custom Dashboard](screenshots/grafana-custom-dashboard.png)
-
-### 2.6 PromQL Best Practices
-
-**Rate Functions:**
-- Use `rate()` for counters to get per-second rates
-- Use `increase()` for counters to get total increase over time
-- Use `irate()` for instant rate (last two data points)
-
-**Aggregation:**
-- `sum()` - Add values together
-- `avg()` - Calculate average
-- `max()`/`min()` - Find maximum/minimum
-- `count()` - Count number of series
-
-**Time Ranges:**
-- `[5m]` - Last 5 minutes
-- `[1h]` - Last 1 hour
-- `[1d]` - Last 1 day
-
-**Label Filtering:**
-- `{job="app-server-1"}` - Exact match
-- `{status_code=~"5.."}` - Regex match (5xx errors)
-- `{instance!="localhost"}` - Not equal
-
-### 2.7 Start Monitoring Stack
-
-```bash
-# Launch Prometheus and Grafana
-docker-compose up -d
-
-# Verify containers are running
-docker ps
-
-# Check Prometheus is scraping targets
-curl http://localhost:9090/targets
-```
-
-### 2.8 Access Monitoring Interfaces
-
-- **Prometheus:** http://localhost:9090
-  - Check targets: Status → Targets
-  - Query metrics: Graph tab
-- **Grafana:** http://localhost:3000
-  - Login: admin/admin (change on first login)
-  - Import dashboard or use auto-provisioned one
-
-### 2.9 Configure Grafana Dashboard
-
-```bash
-# Wait for Grafana to start, then run the configuration script
-chmod +x configure-grafana.sh
-./configure-grafana.sh
-
-# Access Grafana
-# URL: http://localhost:3000
-# Username: admin
-# Password: admin123
-```
-
-### 2.10 Dashboard Import Alternative
-
-If you prefer to use the pre-built dashboard instead of creating a custom one, you can use the automated dashboard import method described above in section 2.7.
-
-### **Case 1: Grafana Dashboard - Both Servers Running**
-<img width="1907" height="926" alt="Screenshot from 2025-07-14 18-52-42" src="https://github.com/user-attachments/assets/a33bac40-c9bf-486c-9098-cf0a9c6e3338" />
-<img width="1866" height="971" alt="Screenshot from 2025-07-14 18-54-04" src="https://github.com/user-attachments/assets/493e6a79-fb33-45bc-88f2-13bc748496c9" />
-
-
-
-
----
-
-## Part 3: Chaos Testing - Simulate Server Failure
-
-### 3.1 Stop One Server Instance
-
-```bash
-# SSH to one of your EC2 instances
-ssh -i your-key.pem ubuntu@server-2-ip
-
-# Stop the chat application container
-sudo docker stop chat-app-container-name
-
-# Or stop the entire instance from AWS Console
-```
-
-### 3.2 Observe Metrics During Failure
-
-```bash
-# Check Prometheus targets status
-curl http://localhost:9090/api/v1/targets | grep health
-
-# Monitor Grafana dashboard for changes
-# Watch for:
-# - Server health status changes
-# - Traffic redistribution to remaining server
-# - Connection handling behavior
-```
-
-### **Case 2: Grafana Dashboard - One Server Down**
-<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-15-45" src="https://github.com/user-attachments/assets/ace1fc9e-f821-45d0-b227-d802ab395694" />
-<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-15-58" src="https://github.com/user-attachments/assets/f843226a-1fa6-48b7-bf29-3039557cea66" />
-
-
-
----
-
-## Part 4: Load Testing with k6
-
-### 4.1 Install k6
-
-```bash
-# On Ubuntu/Debian
-sudo gpg -k
-sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
-sudo apt-get update
-sudo apt-get install k6
-
-# On macOS
-brew install k6
-
-# On Windows
-choco install k6
-```
-
-### 4.2 Configure Load Test Script
-
-Update the `cloud-ws-test.js` file with your actual ALB endpoint:
-- Replace `ALB_ENDPOINT` with your actual ALB DNS name
-- Verify the WebSocket path matches your application (common patterns: /ws, /websocket, /socket.io)
-
-```bash
-# Edit the k6 test script
-nano cloud-ws-test.js
-```
-
-### 4.3 Run Load Tests
-
-```bash
-# Test with both servers running
-k6 run cloud-ws-test.js
-
-# Simulate server failure during test (stop one server mid-test)
-# Run test again and observe behavior
-
-# For cloud testing (optional)
-k6 cloud cloud-ws-test.js
-```
-
-**Case 3: k6 Load Test Results**
-<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-38-22" src="https://github.com/user-attachments/assets/d3039a41-8b8e-4301-9306-e73ae06ef682" />
-<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-46-09" src="https://github.com/user-attachments/assets/28ec40be-cb5a-46e8-9641-1d35aae09cdb" />
-
-
-
----
-
-## Part 5: Understanding PromQL and Metrics
-
-### 5.1 What is PromQL?
-
-**PromQL (Prometheus Query Language)** is the query language used by Prometheus to select and aggregate time series data. It allows you to:
-
-- **Query metrics:** Ask Prometheus for specific metrics data
-- **Filter data:** Use labels to filter results (job, instance, status)
-- **Aggregate data:** Sum, average, or find min/max values over time
-- **Create expressions:** Perform mathematical operations on metrics
-- **Analyze trends:** Calculate rates, increases, and changes over time
-
-### 5.2 Metrics Documentation
+### 2.2 Metrics Documentation
 
 Our chat application exposes several custom metrics that we can query with PromQL:
 
@@ -465,7 +134,7 @@ Our chat application exposes several custom metrics that we can query with PromQ
 | `process_resident_memory_bytes` | Gauge | Process memory usage | `process_resident_memory_bytes / 1024 / 1024` |
 | `process_cpu_seconds_total` | Counter | CPU time consumed | `rate(process_cpu_seconds_total[5m]) * 100` |
 
-### 5.3 Viewing Metrics in Prometheus (Port 9090)
+### 2.3 Viewing Metrics in Prometheus (Port 9090)
 
 Access Prometheus web interface at `http://localhost:9090` to explore and visualize metrics:
 
@@ -514,7 +183,7 @@ rate(process_cpu_seconds_total[5m]) * 100
 **Screenshot Space: Prometheus Graph View**
 ![Prometheus Graph View](screenshots/prometheus-graph-view.png)
 
-### 5.4 Building Custom Grafana Dashboard from PromQL
+### 2.4 Building Custom Grafana Dashboard from PromQL
 
 Instead of importing a pre-built dashboard, you can create your own using the PromQL queries:
 
@@ -588,7 +257,7 @@ http://localhost:3000
 **Screenshot Space: Custom Dashboard Result**
 ![Grafana Custom Dashboard](screenshots/grafana-custom-dashboard.png)
 
-### 5.5 PromQL Best Practices
+### 2.5 PromQL Best Practices
 
 **Rate Functions:**
 - Use `rate()` for counters to get per-second rates
@@ -609,6 +278,131 @@ http://localhost:3000
 **Label Filtering:**
 - `{job="app-server-1"}` - Exact match
 - `{status_code=~"5.."}` - Regex match (5xx errors)
+- `{instance!="localhost"}` - Not equal
+
+---
+
+## Part 3: Grafana Dashboard Configuration
+
+### 3.1 Configure Grafana Dashboard
+
+```bash
+# Wait for Grafana to start, then run the configuration script
+chmod +x configure-grafana.sh
+./configure-grafana.sh
+
+# Access Grafana
+# URL: http://localhost:3000
+# Username: admin
+# Password: admin123
+```
+
+### 3.2 Access Monitoring Interfaces
+
+- **Prometheus:** http://localhost:9090
+  - Check targets: Status → Targets
+  - Query metrics: Graph tab
+- **Grafana:** http://localhost:3000
+  - Login: admin/admin (change on first login)
+  - Import dashboard or use auto-provisioned one
+
+### 3.3 Dashboard Import Alternative
+
+If you prefer to use the pre-built dashboard instead of creating a custom one, you can use the automated dashboard import method described above in section 3.1.
+
+### **Case 1: Grafana Dashboard - Both Servers Running**
+<img width="1907" height="926" alt="Screenshot from 2025-07-14 18-52-42" src="https://github.com/user-attachments/assets/a33bac40-c9bf-486c-9098-cf0a9c6e3338" />
+<img width="1866" height="971" alt="Screenshot from 2025-07-14 18-54-04" src="https://github.com/user-attachments/assets/493e6a79-fb33-45bc-88f2-13bc748496c9" />
+
+
+
+
+---
+
+## Part 4: Chaos Testing - Simulate Server Failure
+
+### 4.1 Stop One Server Instance
+
+```bash
+# SSH to one of your EC2 instances
+ssh -i your-key.pem ubuntu@server-2-ip
+
+# Stop the chat application container
+sudo docker stop chat-app-container-name
+
+# Or stop the entire instance from AWS Console
+```
+
+### 4.2 Observe Metrics During Failure
+
+```bash
+# Check Prometheus targets status
+curl http://localhost:9090/api/v1/targets | grep health
+
+# Monitor Grafana dashboard for changes
+# Watch for:
+# - Server health status changes
+# - Traffic redistribution to remaining server
+# - Connection handling behavior
+```
+
+### **Case 2: Grafana Dashboard - One Server Down**
+<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-15-45" src="https://github.com/user-attachments/assets/ace1fc9e-f821-45d0-b227-d802ab395694" />
+<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-15-58" src="https://github.com/user-attachments/assets/f843226a-1fa6-48b7-bf29-3039557cea66" />
+
+
+
+---
+
+## Part 5: Load Testing with k6
+
+### 5.1 Install k6
+
+```bash
+# On Ubuntu/Debian
+sudo gpg -k
+sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+sudo apt-get update
+sudo apt-get install k6
+
+# On macOS
+brew install k6
+
+# On Windows
+choco install k6
+```
+
+### 5.2 Configure Load Test Script
+
+Update the `cloud-ws-test.js` file with your actual ALB endpoint:
+- Replace `ALB_ENDPOINT` with your actual ALB DNS name
+- Verify the WebSocket path matches your application (common patterns: /ws, /websocket, /socket.io)
+
+```bash
+# Edit the k6 test script
+nano cloud-ws-test.js
+```
+
+### 5.3 Run Load Tests
+
+```bash
+# Test with both servers running
+k6 run cloud-ws-test.js
+
+# Simulate server failure during test (stop one server mid-test)
+# Run test again and observe behavior
+
+# For cloud testing (optional)
+k6 cloud cloud-ws-test.js
+```
+
+**Case 3: k6 Load Test Results**
+<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-38-22" src="https://github.com/user-attachments/assets/d3039a41-8b8e-4301-9306-e73ae06ef682" />
+<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-46-09" src="https://github.com/user-attachments/assets/28ec40be-cb5a-46e8-9641-1d35aae09cdb" />
+
+
+
 - `{instance!="localhost"}` - Not equal
 
 ---
