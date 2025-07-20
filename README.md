@@ -152,7 +152,8 @@ http://localhost:9090
 - `app_uptime_seconds` - Show application uptime
 
 **Screenshot Space: Prometheus Query Interface**
-![Prometheus Basic Query](screenshots/prometheus-basic-query.png)
+<img width="1919" height="805" alt="image" src="https://github.com/user-attachments/assets/ae65e9d9-8f24-47fc-b430-723e50f2d5c8" />
+
 
 #### Step 2: Advanced PromQL Queries
 ```promql
