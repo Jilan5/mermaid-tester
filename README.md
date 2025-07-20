@@ -174,15 +174,8 @@ rate(process_cpu_seconds_total[5m]) * 100
 ```
 
 **Screenshot Space: Prometheus Advanced Queries**
-![Prometheus Advanced Query](screenshots/prometheus-advanced-query.png)
+<img width="1919" height="805" alt="image" src="https://github.com/user-attachments/assets/adca7679-50f0-4068-8ddf-d00ab2c11396" />
 
-#### Step 3: Using Graph View
-- Click the "Graph" tab to see time series visualization
-- Adjust time range using the time picker
-- Add multiple queries to compare metrics
-
-**Screenshot Space: Prometheus Graph View**
-![Prometheus Graph View](screenshots/prometheus-graph-view.png)
 
 ### 2.4 Building Custom Grafana Dashboard from PromQL
 
