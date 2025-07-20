@@ -182,15 +182,26 @@ rate(process_cpu_seconds_total[5m]) * 100
 Instead of importing a pre-built dashboard, you can create your own using the PromQL queries:
 
 #### Step 1: Create New Dashboard
-```bash
-# Access Grafana
-http://localhost:3000
-# Username: admin, Password: admin123
 
-# 1. Click "+" → "Dashboard"
-# 2. Click "Add new panel"
-# 3. Select Prometheus as data source
-```
+**Access Grafana:**
+- Open your browser and go to: http://localhost:3000
+- Login credentials: Username: admin, Password: admin123
+
+**Add Prometheus Data Source:**
+- Click "Connections" → "Data sources" (or gear icon → "Data sources")
+- Click "Add data source"
+- Select "Prometheus"
+- Configure the URL:
+  - Get your eth0 IP address: `ip addr show eth0`
+  - Use: http://YOUR_ETH0_IP:9090 (e.g., http://192.168.1.100:9090)
+  - **Important:** Do NOT use localhost:9090 (won't work from Grafana container)
+- Click "Save & test" to verify connection
+
+**Create New Dashboard:**
+- Click "+" → "Dashboard"
+- Click "Add new panel"  
+- Select the Prometheus data source you just configured
+
 
 #### Step 2: Add Panels with Custom PromQL
 
