@@ -196,6 +196,7 @@ Instead of importing a pre-built dashboard, you can create your own using the Pr
   - Use: http://YOUR_ETH0_IP:9090 (e.g., http://192.168.1.100:9090)
   - **Important:** Do NOT use localhost:9090 (won't work from Grafana container)
 - Click "Save & test" to verify connection
+<img width="1919" height="805" alt="image" src="https://github.com/user-attachments/assets/94336050-a7e0-4912-82e6-6a50203c237d" />
 
 **Create New Dashboard:**
 - Click "+" → "Dashboard"
