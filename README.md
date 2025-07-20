@@ -453,33 +453,9 @@ curl http://localhost:9090/api/v1/targets | grep health
 - WebSocket connection counts
 - Message delivery statistics
 
----
 
-## Part 5: Analysis and Observations
 
-### 5.1 Expected Behaviors
 
-- **Both Servers Healthy**: Load distributed across both instances
-- **One Server Down**: All traffic redirected to healthy server
-- **Load Testing**: WebSocket connections and message rates visible in dashboard
-- **Recovery**: Metrics return to normal when failed server is restored
-
----
-
-## Part 6: Cleanup
-
-```bash
-# Stop monitoring stack
-docker-compose down
-
-# Remove volumes (optional)
-docker-compose down -v
-
-# Clean up AWS resources
-# - Terminate EC2 instances
-# - Delete Load Balancer
-# - Clean up security groups
-```
 
 ---
 
