@@ -22,7 +22,9 @@ In this lab, we will deploy a real-time chat application to AWS using multiple E
 - **Load Balancer**: Monitor ALB health and traffic distribution
 
 ---
-<img width="1271" height="409" alt="Untitled-2025-07-20-1255" src="https://github.com/user-attachments/assets/286dceaa-22c4-4543-8aa5-09e946f174cf" />
+<img width="2524" height="819" alt="Untitled-2025-07-20-1255" src="https://github.com/user-attachments/assets/65c6d772-a591-4b46-8651-cc6708db4d37" />
+
+
 
 ## Part 1: Deploy Chat Application and Set Up Monitoring Configuration
 
@@ -185,7 +187,7 @@ Instead of importing a pre-built dashboard, you can create your own using the Pr
 #### Step 1: Create New Dashboard
 
 **Access Grafana:**
-- Open your browser and go to: http://localhost:3000
+- Open your browser and go to: http://localhost:3000  or make  a Load Balancer if you are trying from Poridhi Virtual Machine
 - Login credentials: Username: admin, Password: admin123
 
 **Add Prometheus Data Source:**
@@ -292,17 +294,17 @@ chmod +x configure-grafana.sh
 ./configure-grafana.sh
 
 # Access Grafana
-# URL: http://localhost:3000
+# URL: http://localhost:3000 or make  a Load Balancer if you are trying from Poridhi Virtual Machine
 # Username: admin
 # Password: admin123
 ```
 
 ### 3.2 Access Monitoring Interfaces
 
-- **Prometheus:** http://localhost:9090
+- **Prometheus:** http://localhost:9090 or make  a Load Balancer if you are trying from Poridhi Virtual Machine
   - Check targets: Status → Targets
   - Query metrics: Graph tab
-- **Grafana:** http://localhost:3000
+- **Grafana:** http://localhost:3000 or make  a Load Balancer if you are trying from Poridhi Virtual Machine
   - Login: admin/admin (change on first login)
   - Import dashboard or use auto-provisioned one
 
@@ -319,61 +321,31 @@ If you prefer to use the pre-built dashboard instead of creating a custom one, y
 
 ---
 
-## Part 4: Chaos Testing - Simulate Server Failure
+## Part 4: Chaos Engineering and Load Testing with k6
+<img width="2390" height="819" alt="image" src="https://github.com/user-attachments/assets/7465ad8d-d2a5-4be4-ba66-03e5cc5e5d95" />
 
-### 4.1 Stop One Server Instance
+### 4.1 Install k6 Load Testing Tool
 
+**On Ubuntu/Debian:**
 ```bash
-# SSH to one of your EC2 instances
-ssh -i your-key.pem ubuntu@server-2-ip
-
-# Stop the chat application container
-sudo docker stop chat-app-container-name
-
-# Or stop the entire instance from AWS Console
-```
-
-### 4.2 Observe Metrics During Failure
-
-```bash
-# Check Prometheus targets status
-curl http://localhost:9090/api/v1/targets | grep health
-
-# Monitor Grafana dashboard for changes
-# Watch for:
-# - Server health status changes
-# - Traffic redistribution to remaining server
-# - Connection handling behavior
-```
-
-### **Case 2: Grafana Dashboard - One Server Down**
-<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-15-45" src="https://github.com/user-attachments/assets/ace1fc9e-f821-45d0-b227-d802ab395694" />
-<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-15-58" src="https://github.com/user-attachments/assets/f843226a-1fa6-48b7-bf29-3039557cea66" />
-
-
-
----
-
-## Part 5: Load Testing with k6
-
-### 5.1 Install k6
-
-```bash
-# On Ubuntu/Debian
 sudo gpg -k
 sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
 echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
 sudo apt-get update
 sudo apt-get install k6
+```
 
-# On macOS
+**On macOS:**
+```bash
 brew install k6
+```
 
-# On Windows
+**On Windows:**
+```bash
 choco install k6
 ```
 
-### 5.2 Configure Load Test Script
+### 4.2 Configure Load Test Script
 
 Update the `cloud-ws-test.js` file with your actual ALB endpoint:
 - Replace `ALB_ENDPOINT` with your actual ALB DNS name
@@ -384,41 +356,217 @@ Update the `cloud-ws-test.js` file with your actual ALB endpoint:
 nano cloud-ws-test.js
 ```
 
-### 5.3 Run Load Tests
+### 4.3 Baseline Load Testing (Both Servers Healthy)
+
+First, establish baseline performance with both servers running:
 
 ```bash
-# Test with both servers running
+# Test with both servers running - establish baseline
 k6 run cloud-ws-test.js
+```
 
-# Simulate server failure during test (stop one server mid-test)
-# Run test again and observe behavior
+**Expected Results:**
+- All WebSocket connections succeed
+- Load distributed across both app servers
+- Low error rates and response times
 
-# For cloud testing (optional)
+**Case 1: k6 Load Test Results - Both Servers Healthy**
+<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-38-22" src="https://github.com/user-attachments/assets/d3039a41-8b8e-4301-9306-e73ae06ef682" />
+
+Monitor your Grafana dashboard during the test to observe:
+- WebSocket connection distribution
+- HTTP request rates across servers
+- Memory and CPU usage patterns
+
+### 4.4 Chaos Testing - Simulate Server Failure Under Load
+
+Now we'll perform chaos engineering by failing one server while under load:
+
+#### Step 1: Start Load Test
+```bash
+# Start a longer load test (in a separate terminal)
+k6 run --duration=5m cloud-ws-test.js
+```
+
+#### Step 2: Simulate Server Failure (During Load Test)
+```bash
+# While k6 is running, SSH to one of your EC2 instances
+ssh -i your-key.pem ubuntu@server-2-ip
+
+# Stop the chat application container
+sudo docker stop chat-app-container-name
+
+# Or stop the entire instance from AWS Console
+```
+
+#### Step 3: Observe Real-time Impact
+Monitor your Grafana dashboard for immediate changes:
+- Server health status changes from UP to DOWN
+- Traffic redistribution to remaining healthy server
+- WebSocket connection handling behavior
+- Potential spike in error rates during failover
+
+**Case 2: Grafana Dashboard - Server Failure Under Load**
+<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-15-45" src="https://github.com/user-attachments/assets/ace1fc9e-f821-45d0-b227-d802ab395694" />
+<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-15-58" src="https://github.com/user-attachments/assets/f843226a-1fa6-48b7-bf29-3039557cea66" />
+
+#### Step 4: Analyze k6 Results During Chaos
+```bash
+# Check Prometheus targets status
+curl http://localhost:9090/api/v1/targets | grep health
+
+# Observe in Grafana dashboard:
+# - Server health status changes
+# - Traffic redistribution patterns
+# - WebSocket connection recovery behavior
+# - Error rate spikes and recovery time
+```
+
+**Case 3: k6 Results During and After Server Failure**
+<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-46-09" src="https://github.com/user-attachments/assets/28ec40be-cb5a-46e8-9641-1d35aae09cdb" />
+
+### 4.5 Recovery Testing
+
+Test system recovery by bringing the failed server back online:
+
+#### Step 1: Restore Failed Server
+```bash
+# SSH back to the failed server
+ssh -i your-key.pem ubuntu@server-2-ip
+
+# Restart the chat application container
+sudo docker start chat-app-container-name
+
+# Or start the instance from AWS Console
+```
+
+#### Step 2: Run Post-Recovery Load Test
+```bash
+# Test system behavior after recovery
+k6 run cloud-ws-test.js
+```
+
+#### Step 3: Monitor Recovery Metrics
+Observe in Grafana:
+- Server health status returns to UP
+- Load redistribution across both servers
+- Performance metrics return to baseline
+- No lingering connection issues
+
+### 4.6 Advanced Chaos Testing Scenarios
+
+**Scenario 1: Network Partition Simulation**
+```bash
+# Simulate network issues (on EC2 instance)
+sudo iptables -A INPUT -p tcp --dport 80 -j DROP
+# Remove after testing: sudo iptables -D INPUT -p tcp --dport 80 -j DROP
+```
+
+**Scenario 2: High CPU Load Simulation**
+```bash
+# Create CPU stress on one server
+stress --cpu 4 --timeout 300s
+```
+
+**Scenario 3: Memory Pressure Testing**
+```bash
+# Create memory pressure
+stress --vm 2 --vm-bytes 1G --timeout 300s
+```
+
+### 4.7 Chaos Testing Best Practices
+
+**Pre-Test Checklist:**
+- Establish baseline performance metrics
+- Ensure monitoring is working properly
+- Have recovery procedures documented
+- Set appropriate test duration limits
+
+**During Testing:**
+- Monitor multiple metrics simultaneously
+- Document failure and recovery times
+- Note any unexpected behaviors
+- Take screenshots of key moments
+
+**Post-Test Analysis:**
+- Compare performance before, during, and after failures
+- Identify system bottlenecks and failure points
+- Document lessons learned
+- Plan infrastructure improvements
+
+### 4.8 Cloud Testing (Optional)
+
+For distributed testing from multiple regions:
+
+```bash
+# Run test from k6 cloud platform
 k6 cloud cloud-ws-test.js
 ```
 
-**Case 3: k6 Load Test Results**
-<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-38-22" src="https://github.com/user-attachments/assets/d3039a41-8b8e-4301-9306-e73ae06ef682" />
-<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-46-09" src="https://github.com/user-attachments/assets/28ec40be-cb5a-46e8-9641-1d35aae09cdb" />
-
-
-
-- `{instance!="localhost"}` - Not equal
+This provides:
+- Tests from multiple geographic locations
+- Higher concurrent user simulation
+- Detailed performance analytics
+- Integration with monitoring tools
 
 ---
 
-## Part 6: Analysis and Observations
+## Part 5: Analysis and Observations
 
-### 6.1 Expected Behaviors
+### 5.1 Expected Behaviors
 
-- **Both Servers Healthy**: Load distributed across both instances
-- **One Server Down**: All traffic redirected to healthy server
-- **Load Testing**: WebSocket connections and message rates visible in dashboard
-- **Recovery**: Metrics return to normal when failed server is restored
+**Baseline Performance (Both Servers Healthy):**
+- Load distributed evenly across both instances
+- Low latency and error rates
+- WebSocket connections stable
+- Consistent response times
+
+**During Server Failure:**
+- Temporary spike in error rates during failover
+- All traffic redirected to remaining healthy server
+- Some WebSocket connections may disconnect
+- Performance degradation under increased load
+
+**Post-Recovery:**
+- Load redistribution returns to normal
+- Performance metrics stabilize
+- New WebSocket connections can establish
+- System resilience demonstrated
+
+### 5.2 Key Metrics to Analyze
+
+**Availability Metrics:**
+- Server uptime percentage
+- Failover detection time
+- Recovery time to full capacity
+
+**Performance Metrics:**
+- Response time changes during failure
+- WebSocket connection success rates
+- HTTP request throughput variations
+
+**Resilience Metrics:**
+- Error rate spikes and duration
+- Connection recovery patterns
+- Load balancer effectiveness
+
+### 5.3 Chaos Engineering Insights
+
+**What We Learned:**
+- How the system behaves under real load during failures
+- Application Load Balancer failover effectiveness
+- WebSocket connection resilience patterns
+- Monitoring system responsiveness
+
+**Improvement Opportunities:**
+- Identify single points of failure
+- Optimize failover detection time
+- Enhance connection recovery mechanisms
+- Implement better error handling
 
 ---
 
-## Cleanup
+## Part 6: Cleanup
 
 ```bash
 # Stop monitoring stack
