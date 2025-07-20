@@ -213,31 +213,25 @@ Instead of importing a pre-built dashboard, you can create your own using the Pr
 # Value mappings: 0=DOWN, 1=UP
 # Thresholds: Red=0, Green=1
 ```
+<img width="1919" height="805" alt="image" src="https://github.com/user-attachments/assets/2d0441ba-7d92-4af4-8ce2-5a624e51245f" />
+
 
 **Panel 2: HTTP Request Rate**
 ```promql
 # Query: sum(rate(http_requests_total[5m]))
 # Visualization: Time series
-# Unit: requests/sec
 ```
+<img width="1919" height="805" alt="image" src="https://github.com/user-attachments/assets/58cfe2fd-4fb3-43fc-9148-3ba0cbc590a3" />
 
 **Panel 3: WebSocket Connections**
 ```promql
 # Query: sum(websocket_connections_total)
-# Visualization: Stat
-# Unit: short
-```
+# Visualization: Gauge
 
-**Panel 4: Error Rate**
-```promql
-# Query: sum(rate(http_requests_total{status_code=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) * 100
-# Visualization: Time series
-# Unit: percent
-# Thresholds: Green=0-1%, Yellow=1-5%, Red=>5%
 ```
+<img width="1919" height="805" alt="image" src="https://github.com/user-attachments/assets/23273d71-155b-4d0f-96f2-9138c5facb30" />
 
-**Screenshot Space: Grafana Panel Creation**
-![Grafana New Panel Creation](screenshots/grafana-new-panel.png)
+
 
 #### Step 3: Configure Panel Options
 ```bash
@@ -249,8 +243,6 @@ Instead of importing a pre-built dashboard, you can create your own using the Pr
 # 5. Set refresh interval
 ```
 
-**Screenshot Space: Grafana Panel Configuration**
-![Grafana Panel Configuration](screenshots/grafana-panel-config.png)
 
 #### Step 4: Save Dashboard
 ```bash
@@ -261,7 +253,8 @@ Instead of importing a pre-built dashboard, you can create your own using the Pr
 ```
 
 **Screenshot Space: Custom Dashboard Result**
-![Grafana Custom Dashboard](screenshots/grafana-custom-dashboard.png)
+<img width="1919" height="805" alt="image" src="https://github.com/user-attachments/assets/061674a8-9898-4cb3-8d2b-917976fe78f0" />
+
 
 ### 2.5 PromQL Best Practices
 
@@ -288,7 +281,7 @@ Instead of importing a pre-built dashboard, you can create your own using the Pr
 
 ---
 
-## Part 3: Grafana Dashboard Configuration
+## Part 3: Grafana Dashboard Configuration- ( Pre Build for this project only )
 
 ### 3.1 Configure Grafana Dashboard
 
