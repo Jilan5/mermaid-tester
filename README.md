@@ -308,13 +308,11 @@ chmod +x configure-grafana.sh
   - Login: admin/admin (change on first login)
   - Import dashboard or use auto-provisioned one
 
-### 3.3 Dashboard Import Alternative
 
-If you prefer to use the pre-built dashboard instead of creating a custom one, you can use the automated dashboard import method described above in section 3.1.
 
-### **Case 1: Grafana Dashboard - Both Servers Running**
+### Pre-built Dashboard
 <img width="1907" height="926" alt="Screenshot from 2025-07-14 18-52-42" src="https://github.com/user-attachments/assets/a33bac40-c9bf-486c-9098-cf0a9c6e3338" />
-<img width="1866" height="971" alt="Screenshot from 2025-07-14 18-54-04" src="https://github.com/user-attachments/assets/493e6a79-fb33-45bc-88f2-13bc748496c9" />
+
 
 
 
@@ -324,7 +322,7 @@ If you prefer to use the pre-built dashboard instead of creating a custom one, y
 ## Part 4: Chaos Testing - Grafana K6
 <img width="2390" height="819" alt="image" src="https://github.com/user-attachments/assets/7465ad8d-d2a5-4be4-ba66-03e5cc5e5d95" />
 
-### 4.1 Test Scenario Overview
+### Test Scenario Overview
 
 Our chaos testing scenario simulates real-world failure conditions while monitoring system behavior:
 
@@ -354,7 +352,7 @@ export const options = {
 3. Observe real-time impact on metrics and user experience
 4. Monitor recovery when server comes back online
 
-### 4.2 Case 1: Baseline Performance (Both Servers Healthy)
+### Case 1: Baseline Performance (Both Servers Healthy)
 
 First establish baseline performance before introducing chaos:
 
@@ -365,7 +363,9 @@ First establish baseline performance before introducing chaos:
 - Stable message delivery rates
 
 **Case 1: k6 Load Test Results - Both Servers Healthy**
-<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-38-22" src="https://github.com/user-attachments/assets/d3039a41-8b8e-4301-9306-e73ae06ef682" />
+<img width="1907" height="926" alt="Screenshot from 2025-07-14 18-52-42" src="https://github.com/user-attachments/assets/a33bac40-c9bf-486c-9098-cf0a9c6e3338" />
+<img width="1866" height="971" alt="Screenshot from 2025-07-14 18-54-04" src="https://github.com/user-attachments/assets/493e6a79-fb33-45bc-88f2-13bc748496c9" />
+
 
 ```bash
 # Run baseline test
@@ -374,7 +374,8 @@ k6 run cloud-ws-test.js
 
 Monitor your Grafana dashboard during baseline to observe normal patterns.
 
-### 4.3 Case 2: Server Failure Under Load
+### Case 2: Server Failure Under Load
+<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-38-22" src="https://github.com/user-attachments/assets/d3039a41-8b8e-4301-9306-e73ae06ef682" />
 
 Now simulate server failure while under active load:
 
