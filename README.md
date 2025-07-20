@@ -405,7 +405,7 @@ k6 run cloud-ws-test.js
 
 Monitor your Grafana dashboard during baseline to observe normal patterns.
 
-### 4.5 Case 2: Server Failure Under Load
+### 4.5 Case 2: k6 Load Test Results - Server Failure
 
 Now simulate server failure while under active load:
 
@@ -424,32 +424,15 @@ sudo docker stop chat-app-container-name
 - Some WebSocket connections may drop
 - System should recover and continue serving requests
 
-**Case 2: k6 Load Test Results - Server Failure**
 <img width="1919" height="933" alt="Screenshot from 2025-07-14 19-38-22" src="https://github.com/user-attachments/assets/d3039a41-8b8e-4301-9306-e73ae06ef682" />
 
-**Case 2: Grafana Dashboard - One Server Down**
 <img width="1919" height="933" alt="Screenshot from 2025-07-14 19-15-45" src="https://github.com/user-attachments/assets/ace1fc9e-f821-45d0-b227-d802ab395694" />
 <img width="1919" height="933" alt="Screenshot from 2025-07-14 19-15-58" src="https://github.com/user-attachments/assets/f843226a-1fa6-48b7-bf29-3039557cea66" />
 
-### 4.6 Case 3: Recovery and Additional Load Testing
 
-Test system recovery and explore additional scenarios:
 
-```bash
-# Test with both servers running again
-k6 run cloud-ws-test.js
 
-# Simulate server failure during test (stop one server mid-test)
-# Run test again and observe behavior
-
-# For cloud testing (optional)
-k6 cloud cloud-ws-test.js
-```
-
-**Case 3: k6 Load Test Results - Recovery**
-<img width="1919" height="933" alt="Screenshot from 2025-07-14 19-46-09" src="https://github.com/user-attachments/assets/28ec40be-cb5a-46e8-9641-1d35aae09cdb" />
-
-### 4.7 Observe Metrics During Failure
+### 4.6 Observe Metrics During Failure
 
 Monitor real-time changes in your dashboards:
 
